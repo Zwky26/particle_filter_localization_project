@@ -133,9 +133,13 @@ class ParticleFilter:
 
     def normalize_particles(self):
         # make all the particle weights sum to 1.0
+        # Calculate total particle weight sum
+        weight_sum = 0.0
+        for p in self.particle_cloud:
+            weight_sum += p.w
+        for p in self.particle_cloud:
+            p.w /= weight_sum
         
-        # TODO
-
 
 
     def publish_particle_cloud(self):
