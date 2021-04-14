@@ -166,8 +166,11 @@ class ParticleFilter:
 
 
     def resample_particles(self):
-
-        # TODO
+        particle_poses = [p.pose for p in self.particle_cloud] # get list of particle poses
+        weights = [p.w for p in self.particle_cloud] # get probabilities (weights) for all particle poses
+        np_array = random.choice(a=particle_poses, size=self.num_particles, replace=True, p=weights) # random sample
+        np_array.tolist()
+        self.particle_cloud = np_array
 
 
 
