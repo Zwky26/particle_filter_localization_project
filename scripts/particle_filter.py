@@ -137,9 +137,10 @@ class ParticleFilter:
         #drills to find all acceptable locations in occupancy grid
         spaces = []
         weights = []
-        for row in range (self.map.info.width):
-            for col in range (self.map.info.height):
-                ind = row + col*self.map.info.width
+        # need to fix row-major order i think
+        for col in range (self.map.info.width):
+            for row in range (self.map.info.height):
+                ind = col + row*self.map.info.width
                 w = self.map.data[ind]
                 if w > 0:
                     spaces.append((row, col))
@@ -148,7 +149,6 @@ class ParticleFilter:
         chosen_spaces = draw_random_sample(list(range(0, len(spaces))), [1.0 / len(spaces)] * len(spaces), self.num_particles)
         
         # Make particle objects
-        particles = []
         for space in chosen_spaces:
             p = Pose()
             p.position.x = spaces[space][0]
@@ -162,6 +162,8 @@ class ParticleFilter:
 
             new_particle = Particle(p, 1.0) 
             self.particle_cloud.append(new_particle)
+        for p in self.particle_cloud:
+            print(p.pose.position.x, p.pose.position.y)
         self.normalize_particles()
 
         self.publish_particle_cloud()
