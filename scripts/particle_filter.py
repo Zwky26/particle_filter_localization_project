@@ -44,9 +44,8 @@ def get_yaw_from_pose(p):
 
 
 def draw_random_sample(elements, probabilities, n):
-    """ Draws a random sample of n elements from a given list of choices and their specified probabilities.
-    We recommend that you fill in this function using random_sample. Samples with replacement.
-    """
+    """ Draws a random sample of n elements from a given list of choices 
+        and their specified weights. Samples with replacement. """
     return random_sample.choice(a=elements, size=n, replace=True, p=probabilities).tolist()
 
 
@@ -127,13 +126,15 @@ class ParticleFilter:
 
 
     def get_map(self, data):
-
+        '''Called when map is first loaded'''
         self.map = data
+        #print(data) for testing
     
 
     def initialize_particle_cloud(self):
+        ''' Using self.map, get occupancy grid.
+            In grid, get all cells that have a positive weight, normalize and random sample'''
         
-        # TODO
 
         self.normalize_particles()
 
@@ -141,9 +142,8 @@ class ParticleFilter:
 
 
     def normalize_particles(self):
-        # TODO
-        # make all the particle weights sum to 1.0
-        # Calculate total particle weight sum
+        ''' make all the particle weights sum to 1.0
+            Calculate total particle weight sum'''
         weight_sum = 0.0
         for p in self.particle_cloud:
             weight_sum += p.w
@@ -179,7 +179,7 @@ class ParticleFilter:
         # TODO
         particle_poses = [p.pose for p in self.particle_cloud] # get list of particle poses
         weights = [p.w for p in self.particle_cloud] # get probabilities (weights) for all particle poses
-        new_sample = draw_random_sample(particle_poses, weights, self.num_particles):# random sample
+        new_sample = draw_random_sample(particle_poses, weights, self.num_particles) # random sample
         self.particle_cloud = new_sample
 
 
@@ -322,7 +322,6 @@ class ParticleFilter:
 
 if __name__=="__main__":
     
-
     pf = ParticleFilter()
 
     rospy.spin()
