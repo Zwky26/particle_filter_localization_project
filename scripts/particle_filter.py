@@ -46,7 +46,7 @@ def get_yaw_from_pose(p):
 def draw_random_sample(elements, probabilities, n):
     """ Draws a random sample of n elements from a given list of choices 
         and their specified weights. Samples with replacement. """
-    return random_sample.choice(a=elements, size=n, replace=True, p=probabilities).tolist()
+    return np.random.choice(a=elements, size=n, replace=True, p=probabilities).tolist()
 
 
 class Particle:
@@ -137,15 +137,32 @@ class ParticleFilter:
         #drills to find all acceptable locations in occupancy grid
         spaces = []
         weights = []
-        for row in self.map:
-            for col in row:
-                w = self.map[row][col]
+        for row in range (self.map.info.width):
+            for col in range (self.map.info.height):
+                ind = row + col*self.map.info.width
+                w = self.map.data[ind]
                 if w > 0:
                     spaces.append((row, col))
-                    weights.append(w)
+        
+        # draw_random_sample has to use 1-d array (so work with list indices 
+        chosen_spaces = draw_random_sample(list(range(0, len(spaces))), [1.0 / len(spaces)] * len(spaces), self.num_particles)
+        
+        # Make particle objects
+        particles = []
+        for space in chosen_spaces:
+            p = Pose()
+            p.position.x = spaces[space][0]
+            p.position.y = spaces[space][1]
+            random_yaw = randint(0, 359)
+            q = quaternion_from_euler(0, 0, random_yaw)
+            p.orientation.x = q[0]
+            p.orientation.y = q[1]
+            p.orientation.z = q[2]
+            p.orientation.w = q[3]
 
-        self.particle_cloud = draw_random_sample(spaces, self.num_particles, weights)
-
+            new_particle = Particle(p, 1.0) 
+            self.particle_cloud.append(new_particle)
+        self.particle_cloud = particles
         self.normalize_particles()
 
         self.publish_particle_cloud()
@@ -249,7 +266,7 @@ class ParticleFilter:
 
                 # This is where the main logic of the particle filter is carried out
 
-                self.update_particles_with_motion_model()
+                self.update_particles_with_motion_model(curr_x - old_x, curr_y - old_y, curr_yaw - old_yaw)
 
                 self.update_particle_weights_with_measurement_model(data)
 
@@ -320,14 +337,21 @@ class ParticleFilter:
         return random_sample.normal(loc=center, scale=scale)
     
 
-    def update_particles_with_motion_model(self):
+    def update_particles_with_motion_model(self, x_diff, y_diff, yaw_diff):
 
         # based on the how the robot has moved (calculated from its odometry), we'll  move
         # all of the particles correspondingly
         # Generate noise with generate_noise helper function
-
         # TODO
-
+        for particle in self.particle_cloud:
+            particle_x = particle.pose.position.x
+            particle_y = particle.pose.position.y
+            particle_theta = get_yaw_from_pose(particle.pose)
+            # Can play with scale of noise later
+            particle.pose.position.x = self.generate_noise(particle_x + x_diff, 0.05)
+            particle.pose.position.y = self.generate_noise(particle_y + y_diff, 0.05)
+            new_theta = self.generate_noise(particle_theta + yaw_diff, 0.05) % 360 # I think this makes angle from 0-359
+            particle.pose.orientation = quaternion_from_euler([0, 0, new_theta])
 
 
 if __name__=="__main__":
