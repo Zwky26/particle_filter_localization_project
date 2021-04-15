@@ -136,13 +136,12 @@ class ParticleFilter:
             In grid, get all cells that have a positive weight, normalize and random sample'''
         #drills to find all acceptable locations in occupancy grid
         spaces = []
-        weights = []
         # need to fix row-major order i think
         for col in range (self.map.info.width):
             for row in range (self.map.info.height):
                 ind = col + row*self.map.info.width
                 w = self.map.data[ind]
-                if w > 0:
+                if w == 0:
                     spaces.append((row, col))
         
         # draw_random_sample has to use 1-d array (so work with list indices 
