@@ -292,12 +292,18 @@ class ParticleFilter:
         # TODO
 
 
-        
+    
+    def generate_noise(self, center, scale):
+        """This helper function generates random noise based on a normal distribution
+            center: center of the distribution, scale: 'width' of distribution (standard deviation)"""
+        return random_sample.normal(loc=center, scale=scale)
+    
 
     def update_particles_with_motion_model(self):
 
         # based on the how the robot has moved (calculated from its odometry), we'll  move
         # all of the particles correspondingly
+        # Generate noise with generate_noise helper function
 
         # TODO
 
