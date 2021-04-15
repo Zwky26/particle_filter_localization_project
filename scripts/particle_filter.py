@@ -43,12 +43,11 @@ def get_yaw_from_pose(p):
     return yaw
 
 
-def draw_random_sample():
+def draw_random_sample(elements, probabilities, n):
     """ Draws a random sample of n elements from a given list of choices and their specified probabilities.
-    We recommend that you fill in this function using random_sample.
+    We recommend that you fill in this function using random_sample. Samples with replacement.
     """
-    # TODO
-    return
+    return random_sample.choice(a=elements, size=n, replace=True, p=probabilities).tolist()
 
 
 class Particle:
@@ -180,9 +179,8 @@ class ParticleFilter:
         # TODO
         particle_poses = [p.pose for p in self.particle_cloud] # get list of particle poses
         weights = [p.w for p in self.particle_cloud] # get probabilities (weights) for all particle poses
-        np_array = random.choice(a=particle_poses, size=self.num_particles, replace=True, p=weights) # random sample
-        np_array.tolist()
-        self.particle_cloud = np_array
+        new_sample = draw_random_sample(particle_poses, weights, self.num_particles):# random sample
+        self.particle_cloud = new_sample
 
 
 
