@@ -134,7 +134,17 @@ class ParticleFilter:
     def initialize_particle_cloud(self):
         ''' Using self.map, get occupancy grid.
             In grid, get all cells that have a positive weight, normalize and random sample'''
-        
+        #drills to find all acceptable locations in occupancy grid
+        spaces = []
+        weights = []
+        for row in self.map:
+            for col in row:
+                w = self.map[row][col]
+                if w > 0:
+                    spaces.append((row, col))
+                    weights.append(w)
+
+        self.particle_cloud = draw_random_sample(spaces, self.num_particles, weights)
 
         self.normalize_particles()
 
