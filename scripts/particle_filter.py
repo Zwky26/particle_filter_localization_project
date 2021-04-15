@@ -162,10 +162,10 @@ class ParticleFilter:
 
             new_particle = Particle(p, 1.0) 
             self.particle_cloud.append(new_particle)
-        self.particle_cloud = particles
         self.normalize_particles()
 
         self.publish_particle_cloud()
+        print("init done")
 
 
     def normalize_particles(self):
