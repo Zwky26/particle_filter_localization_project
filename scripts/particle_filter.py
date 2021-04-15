@@ -18,7 +18,17 @@ import math
 
 from random import randint, random
 
+# Likelihood field
+from likelihood_field import LikelihoodField
 
+
+def compute_prob_zero_centered_gaussian(dist, sd):
+    """ Takes in distance from zero (dist) and standard deviation (sd) for gaussian
+        and returns probability (likelihood) of observation 
+        Helper function from class 6 for use in measurement model"""
+    c = 1.0 / (sd * math.sqrt(2 * math.pi))
+    prob = c * math.exp((-math.pow(dist,2))/(2 * math.pow(sd, 2)))
+    return prob
 
 def get_yaw_from_pose(p):
     """ A helper function that takes in a Pose object (geometry_msgs) and returns yaw"""
@@ -71,8 +81,9 @@ class ParticleFilter:
         self.odom_frame = "odom"
         self.scan_topic = "scan"
 
-        # inialize our map
+        # inialize our map and likelihood field
         self.map = OccupancyGrid()
+        self.lh_field = LikelihoodField()
 
         # the number of particles used in the particle filter
         self.num_particles = 10000
@@ -125,13 +136,13 @@ class ParticleFilter:
         
         # TODO
 
-
         self.normalize_particles()
 
         self.publish_particle_cloud()
 
 
     def normalize_particles(self):
+        # TODO
         # make all the particle weights sum to 1.0
         # Calculate total particle weight sum
         weight_sum = 0.0
@@ -166,6 +177,7 @@ class ParticleFilter:
 
 
     def resample_particles(self):
+        # TODO
         particle_poses = [p.pose for p in self.particle_cloud] # get list of particle poses
         weights = [p.w for p in self.particle_cloud] # get probabilities (weights) for all particle poses
         np_array = random.choice(a=particle_poses, size=self.num_particles, replace=True, p=weights) # random sample
@@ -248,13 +260,35 @@ class ParticleFilter:
 
     def update_estimated_robot_pose(self):
         # based on the particles within the particle cloud, update the robot pose estimate
-        
+        # This function takes the normalized weighted average of all particles 
+        # https://en.wikipedia.org/wiki/Weighted_arithmetic_mean
         # TODO
+        x_avg = 0
+        y_avg = 0
+        quaternion_x_avg = 0
+        quaternion_y_avg = 0
+        quaternion_z_avg = 0
+        quaternion_w_avg = 0
+
+        for p in self.particle_cloud:
+            x_avg += (p.w * p.pose.position.x)
+            y_avg += (p.w * p.pose.position.y)
+            quaternion_x_avg += (p.w * p.pose.orientation.x)
+            quaternion_y_avg += (p.w * p.pose.orientation.y)
+            quaternion_z_avg += (p.w * p.pose.orientation.z)
+            quaternion_w_avg += (p.w * p.pose.orientation.w)
+        new_pose = Pose()
+        new_pose.position.x = x_avg
+        new_pose.position.y = y_avg
+        new_pose.orientation.x = quaternion_x_avg
+        new_pose.orientation.y = quaternion_y_avg
+        new_pose.orientation.z = quaternion_z_avg
+        new_pose.orientation.w = quaternion_w_avg
 
 
     
     def update_particle_weights_with_measurement_model(self, data):
-
+        # Update with likelihood field 
         # TODO
 
 
@@ -275,12 +309,5 @@ if __name__=="__main__":
     pf = ParticleFilter()
 
     rospy.spin()
-
-
-
-
-
-
-
 
 
