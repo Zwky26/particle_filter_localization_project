@@ -206,9 +206,9 @@ class ParticleFilter:
 
     def resample_particles(self):
         # TODO
-        particle_poses = [p.pose for p in self.particle_cloud] # get list of particle poses
+        particles = [p for p in self.particle_cloud] # get list of particle poses
         weights = [p.w for p in self.particle_cloud] # get probabilities (weights) for all particle poses
-        new_sample = draw_random_sample(particle_poses, weights, self.num_particles) # random sample
+        new_sample = draw_random_sample(particles, weights, self.num_particles) # random sample
         self.particle_cloud = new_sample
 
 
@@ -311,6 +311,7 @@ class ParticleFilter:
         new_pose.orientation.y = quaternion_y_avg
         new_pose.orientation.z = quaternion_z_avg
         new_pose.orientation.w = quaternion_w_avg
+        self.robot_estimate = new_pose
 
 
     
@@ -324,19 +325,22 @@ class ParticleFilter:
         for particle in self.particle_cloud:
             q = 1
             for i in range(len(cardinal_direction_idxs)):
-                if measurements[i] <= 3.5:
+                if lidar_measurements[i] <= 3.5:
                     euler_angle = get_yaw_from_pose(particle.pose)
                     adjusted_x = particle.pose.position.x + (lidar_measurements[i] * math.cos(euler_angle + math.radians(cardinal_direction_idxs[i])))
                     adjusted_y = particle.pose.position.y + (lidar_measurements[i] * math.sin(euler_angle + math.radians(cardinal_direction_idxs[i])))
-                    dist = self.likelihood_field.get_closest_obstacle_distance(adjusted_x, adjusted_y)
+                    dist = self.lh_field.get_closest_obstacle_distance(adjusted_x, adjusted_y)
                     q = q * (compute_prob_zero_centered_gaussian(dist, 0.1)) # adjust this to be the more complicated version
-            particle.w = q
+            if q != float('nan'):
+                particle.w = q
+            else:
+                particle.w = 0
 
     
     def generate_noise(self, center, scale):
         """This helper function generates random noise based on a normal distribution
             center: center of the distribution, scale: 'width' of distribution (standard deviation)"""
-        return random_sample.normal(loc=center, scale=scale)
+        return np.random.normal(loc=center, scale=scale)
     
 
     def update_particles_with_motion_model(self, x_diff, y_diff, yaw_diff):
@@ -348,24 +352,17 @@ class ParticleFilter:
         for particle in self.particle_cloud:
             particle_x = particle.pose.position.x
             particle_y = particle.pose.position.y
-            particle_theta = get_yaw_from_pose(particle.pose)
-            # Can play with scale of noise later
+            particle_theta = get_yaw_from_pose(particle.pose)            # Can play with scale of noise later
             particle.pose.position.x = self.generate_noise(particle_x + x_diff, 0.05)
             particle.pose.position.y = self.generate_noise(particle_y + y_diff, 0.05)
             new_theta = self.generate_noise(particle_theta + yaw_diff, 0.05) % 360 # I think this makes angle from 0-359
-            particle.pose.orientation = quaternion_from_euler([0, 0, new_theta])
-'''
-    def run(self):
-        r = rospy.Rate(1)
-        while not rospy.is_shutdown():
-            self.publish_particle_cloud()
-            r.sleep()
-'''
+            new_q = quaternion_from_euler(0, 0, new_theta)
+            particle.pose.orientation.x = new_q[0]
+            particle.pose.orientation.y = new_q[1]
+            particle.pose.orientation.z = new_q[2]
+            particle.pose.orientation.w = new_q[3]
+
 if __name__=="__main__":
-    '''
-    node = ParticleFilter()
-    node.run()
-    '''
     pf = ParticleFilter()
 
     rospy.spin()
