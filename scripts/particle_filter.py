@@ -136,9 +136,9 @@ class ParticleFilter:
         #drills to find all acceptable locations in occupancy grid
         spaces = []
         # need to fix row-major order i think
-        for col in range (self.map.info.width):
-            for row in range (self.map.info.height):
-                ind = col + row*self.map.info.width
+        for row in range (self.map.info.width):
+            for col in range (self.map.info.height):
+                ind = row + col*self.map.info.width
                 w = self.map.data[ind]
                 if w == 0:
                     spaces.append((row, col))
