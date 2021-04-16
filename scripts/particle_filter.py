@@ -84,7 +84,7 @@ class ParticleFilter:
         self.lh_field = LikelihoodField()
 
         # the number of particles used in the particle filter
-        self.num_particles = 10000
+        self.num_particles = 5
 
         # initialize the particle cloud array
         self.particle_cloud = []
@@ -102,7 +102,7 @@ class ParticleFilter:
         # Setup publishers and subscribers
 
         # publish the current particle cloud
-        self.particles_pub = rospy.Publisher("particle_cloud", PoseArray, queue_size=10)
+        self.particles_pub = rospy.Publisher("particlecloud", PoseArray, queue_size=10)
 
         # publish the estimated robot pose
         self.robot_estimate_pub = rospy.Publisher("estimated_robot_pose", PoseStamped, queue_size=10)
@@ -117,10 +117,10 @@ class ParticleFilter:
         self.tf_listener = TransformListener()
         self.tf_broadcaster = TransformBroadcaster()
 
-
         # intialize the particle cloud
+        rospy.sleep(5)
         self.initialize_particle_cloud()
-
+    
         self.initialized = True
 
 
@@ -128,7 +128,6 @@ class ParticleFilter:
     def get_map(self, data):
         '''Called when map is first loaded'''
         self.map = data
-        #print(data) for testing
     
 
     def initialize_particle_cloud(self):
@@ -161,9 +160,11 @@ class ParticleFilter:
 
             new_particle = Particle(p, 1.0) 
             self.particle_cloud.append(new_particle)
-        for p in self.particle_cloud:
-            print(p.pose.position.x, p.pose.position.y)
-        self.normalize_particles()
+            #okay up to this point. Correctly getting map and initializing points
+            #when print out particle cloud we get whats needed
+        #for p in self.particle_cloud:
+         #   print(p.pose.position.x, p.pose.position.y)
+        #self.normalize_particles()
 
         self.publish_particle_cloud()
         print("init done")
@@ -181,7 +182,7 @@ class ParticleFilter:
 
 
     def publish_particle_cloud(self):
-
+        rospy.sleep(1)
         particle_cloud_pose_array = PoseArray()
         particle_cloud_pose_array.header = Header(stamp=rospy.Time.now(), frame_id=self.map_topic)
         particle_cloud_pose_array.poses
@@ -353,12 +354,20 @@ class ParticleFilter:
             particle.pose.position.y = self.generate_noise(particle_y + y_diff, 0.05)
             new_theta = self.generate_noise(particle_theta + yaw_diff, 0.05) % 360 # I think this makes angle from 0-359
             particle.pose.orientation = quaternion_from_euler([0, 0, new_theta])
-
-
+'''
+    def run(self):
+        r = rospy.Rate(1)
+        while not rospy.is_shutdown():
+            self.publish_particle_cloud()
+            r.sleep()
+'''
 if __name__=="__main__":
-    
+    '''
+    node = ParticleFilter()
+    node.run()
+    '''
     pf = ParticleFilter()
 
     rospy.spin()
-
+    
 
