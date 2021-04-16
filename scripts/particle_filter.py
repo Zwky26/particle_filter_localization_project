@@ -129,6 +129,10 @@ class ParticleFilter:
         '''Called when map is first loaded'''
         self.map = data
     
+    def map_point_to_rviz_coord(self, row, col):
+        scale = self.map.info.resolution
+        origin = self.map.info.origin
+        return ((row * scale) + origin.position.x, (col * scale) + origin.position.y)
 
     def initialize_particle_cloud(self):
         ''' Using self.map, get occupancy grid.
@@ -144,7 +148,7 @@ class ParticleFilter:
                 ind = row + col*self.map.info.width
                 w = self.map.data[ind]
                 if w == 0:
-                    spaces.append(((row * scale) + origin.position.x, (col * scale) + origin.position.y))
+                    spaces.append(self.map_point_to_rviz_coord(row, col))
         
         # draw_random_sample has to use 1-d array (so work with list indices 
         chosen_spaces = draw_random_sample(list(range(0, len(spaces))), [1.0 / len(spaces)] * len(spaces), self.num_particles)
