@@ -136,13 +136,15 @@ class ParticleFilter:
         #drills to find all acceptable locations in occupancy grid
         spaces = []
         scale = self.map.info.resolution
+        origin = self.map.info.origin
+        print(origin)
         # need to fix row-major order i think
         for row in range (self.map.info.width):
             for col in range (self.map.info.height):
                 ind = row + col*self.map.info.width
                 w = self.map.data[ind]
                 if w == 0:
-                    spaces.append((row * scale, col * scale))
+                    spaces.append(((row * scale) + origin.position.x, (col * scale) + origin.position.y))
         
         # draw_random_sample has to use 1-d array (so work with list indices 
         chosen_spaces = draw_random_sample(list(range(0, len(spaces))), [1.0 / len(spaces)] * len(spaces), self.num_particles)
