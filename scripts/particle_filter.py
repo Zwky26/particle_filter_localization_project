@@ -84,7 +84,7 @@ class ParticleFilter:
         self.lh_field = LikelihoodField()
 
         # the number of particles used in the particle filter
-        self.num_particles = 10000
+        self.num_particles = 20 #10000
 
         # initialize the particle cloud array
         self.particle_cloud = []
@@ -113,7 +113,7 @@ class ParticleFilter:
         # subscribe to the lidar scan from the robot
         rospy.Subscriber(self.scan_topic, LaserScan, self.robot_scan_received)
 
-        # enable listening for and broadcasting corodinate transforms
+        # enable listening for and broadcasting coordinate transforms
         self.tf_listener = TransformListener()
         self.tf_broadcaster = TransformBroadcaster()
 
@@ -126,23 +126,23 @@ class ParticleFilter:
 
 
     def get_map(self, data):
-        '''Called when map is first loaded'''
+        '''Called when map is first loaded, stores map'''
+        #checked, working fine
         self.map = data
     
     def map_point_to_rviz_coord(self, row, col):
+        '''From row and column of occupancy grid, return as form of xy in map'''
+        #checked, working fine
         scale = self.map.info.resolution
         origin = self.map.info.origin
         return ((row * scale) + origin.position.x, (col * scale) + origin.position.y)
 
     def initialize_particle_cloud(self):
         ''' Using self.map, get occupancy grid.
-            In grid, get all cells that have a positive weight, normalize and random sample'''
+            In grid, get all cells that have a zero weight, normalize and random sample'''
         #drills to find all acceptable locations in occupancy grid
         spaces = []
-        scale = self.map.info.resolution
-        origin = self.map.info.origin
-        print(origin)
-        # need to fix row-major order i think
+        #checked, working fine   
         for row in range (self.map.info.width):
             for col in range (self.map.info.height):
                 ind = row + col*self.map.info.width
@@ -167,27 +167,29 @@ class ParticleFilter:
 
             new_particle = Particle(p, 1.0) 
             self.particle_cloud.append(new_particle)
-            #okay up to this point. Correctly getting map and initializing points
-            #when print out particle cloud we get whats needed
         #for p in self.particle_cloud:
         #    print(p.pose.position.x, p.pose.position.y)
         self.normalize_particles()
 
         self.publish_particle_cloud()
-        print("init done")
+        #print("init done")
 
 
     def normalize_particles(self):
         ''' make all the particle weights sum to 1.0
-            Calculate total particle weight sum'''
+            Calculates total particle weight sum, then scales'''
         weight_sum = 0.0
         for p in self.particle_cloud:
             weight_sum += p.w
         for p in self.particle_cloud:
             p.w /= weight_sum
         
+        
+        
 
     def publish_particle_cloud(self):
+        ''' Publish the current particle cloud so rviz can display it'''
+        #checked, working fine
         rospy.sleep(1)
         particle_cloud_pose_array = PoseArray()
         particle_cloud_pose_array.header = Header(stamp=rospy.Time.now(), frame_id=self.map_topic)
@@ -200,7 +202,8 @@ class ParticleFilter:
 
 
     def publish_estimated_robot_pose(self):
-
+        '''Publishes our best guess of where robot is, so rviz can display it '''
+        #currently untested, not far enough to get accurate estimate
         robot_pose_estimate_stamped = PoseStamped()
         robot_pose_estimate_stamped.pose = self.robot_estimate
         robot_pose_estimate_stamped.header = Header(stamp=rospy.Time.now(), frame_id=self.map_topic)
@@ -212,8 +215,12 @@ class ParticleFilter:
         # TODO
         particles = [p for p in self.particle_cloud] # get list of particle poses
         weights = [p.w for p in self.particle_cloud] # get probabilities (weights) for all particle poses
+        '''print("Weights")
+        for w in weights:
+            print(w)'''
         new_sample = draw_random_sample(particles, weights, self.num_particles) # random sample
         self.particle_cloud = new_sample
+        print(new_sample)
 
 
 
@@ -256,7 +263,6 @@ class ParticleFilter:
 
 
         if self.particle_cloud:
-
             # check to see if we've moved far enough to perform an update
 
             curr_x = self.odom_pose.pose.position.x
@@ -273,12 +279,21 @@ class ParticleFilter:
                 # This is where the main logic of the particle filter is carried out
 
                 self.update_particles_with_motion_model(curr_x - old_x, curr_y - old_y, curr_yaw - old_yaw)
+                '''print("Before measurement weights:\n")
 
+                for p in self.particle_cloud:
+                    print(p.w)'''
+                #ERROR IS RIGHT HERE. WHEN UPDATING WITH SCAN DATA, NEED TO FILTER IF NOT POSSIBLE
+                # SOME POINTS RETURN NAN BC IT CANT BE THAT POINT    
                 self.update_particle_weights_with_measurement_model(data)
+                '''print("After measruement weights:\n")
 
+                for p in self.particle_cloud:
+                    print(p.w)'''
                 self.normalize_particles()
-
+                
                 self.resample_particles()
+                print("sampling done")
 
                 self.update_estimated_robot_pose()
 
