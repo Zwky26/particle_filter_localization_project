@@ -220,8 +220,6 @@ class ParticleFilter:
             print(w)'''
         new_sample = draw_random_sample(particles, weights, self.num_particles) # random sample
         self.particle_cloud = new_sample
-        print(new_sample)
-
 
 
     def robot_scan_received(self, data):
@@ -282,18 +280,17 @@ class ParticleFilter:
                 '''print("Before measurement weights:\n")
 
                 for p in self.particle_cloud:
-                    print(p.w)'''
-                #ERROR IS RIGHT HERE. WHEN UPDATING WITH SCAN DATA, NEED TO FILTER IF NOT POSSIBLE
-                # SOME POINTS RETURN NAN BC IT CANT BE THAT POINT    
+                    print(p.w)'''   
                 self.update_particle_weights_with_measurement_model(data)
-                '''print("After measruement weights:\n")
+                '''print("measurement step done")
+                print("After measruement weights:\n")
 
                 for p in self.particle_cloud:
                     print(p.w)'''
                 self.normalize_particles()
                 
                 self.resample_particles()
-                print("sampling done")
+                
 
                 self.update_estimated_robot_pose()
 
@@ -350,9 +347,11 @@ class ParticleFilter:
                     adjusted_y = particle.pose.position.y + (lidar_measurements[i] * math.sin(euler_angle + math.radians(cardinal_direction_idxs[i])))
                     dist = self.lh_field.get_closest_obstacle_distance(adjusted_x, adjusted_y)
                     q = q * (compute_prob_zero_centered_gaussian(dist, 0.1)) # adjust this to be the more complicated version
-            if q != float('nan'):
+            if not math.isnan(q): #!= float('nan'):
                 particle.w = q
             else:
+                #never actually called. For some reason always just passes in
+                print("got a nan")
                 particle.w = 0
 
     
