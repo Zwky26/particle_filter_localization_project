@@ -84,7 +84,7 @@ class ParticleFilter:
         self.lh_field = LikelihoodField()
 
         # the number of particles used in the particle filter
-        self.num_particles = 20 #10000
+        self.num_particles = 1000
 
         # initialize the particle cloud array
         self.particle_cloud = []
@@ -280,10 +280,10 @@ class ParticleFilter:
                 '''print("Before measurement weights:\n")
 
                 for p in self.particle_cloud:
-                    print(p.w)'''   
+                    print(p.w) '''
                 self.update_particle_weights_with_measurement_model(data)
                 '''print("measurement step done")
-                print("After measruement weights:\n")
+                print("After measurement weights:")
 
                 for p in self.particle_cloud:
                     print(p.w)'''
@@ -335,8 +335,9 @@ class ParticleFilter:
         # Update with likelihood field 
         # TODO
         cardinal_direction_idxs = [0, 45, 90, 135, 180, 225, 270, 315]
-        lidar_measurements = [data.ranges[i] for i in cardinal_direction_idxs] # I think this works in python but test
-
+        lidar_measurements = [data.ranges[i] for i in cardinal_direction_idxs] # tested, this works
+        print("Lidar:")
+        print(lidar_measurements)
         # Iterate through every particle
         for particle in self.particle_cloud:
             q = 1
@@ -345,14 +346,12 @@ class ParticleFilter:
                     euler_angle = get_yaw_from_pose(particle.pose)
                     adjusted_x = particle.pose.position.x + (lidar_measurements[i] * math.cos(euler_angle + math.radians(cardinal_direction_idxs[i])))
                     adjusted_y = particle.pose.position.y + (lidar_measurements[i] * math.sin(euler_angle + math.radians(cardinal_direction_idxs[i])))
-                    dist = self.lh_field.get_closest_obstacle_distance(adjusted_x, adjusted_y)
-                    q = q * (compute_prob_zero_centered_gaussian(dist, 0.1)) # adjust this to be the more complicated version
-            if not math.isnan(q): #!= float('nan'):
-                particle.w = q
-            else:
-                #never actually called. For some reason always just passes in
-                print("got a nan")
+                    dist = self.lh_field.get_closest_obstacle_distance(adjusted_x, adjusted_y) #might need to convert these to likelihood coordinates
+                    q = q * (compute_prob_zero_centered_gaussian(dist, 0.5)) # todo adjust this to be the more complicated version
+            if math.isnan(q): 
                 particle.w = 0
+            else:
+                particle.w = q
 
     
     def generate_noise(self, center, scale):
@@ -366,7 +365,7 @@ class ParticleFilter:
         # based on the how the robot has moved (calculated from its odometry), we'll  move
         # all of the particles correspondingly
         # Generate noise with generate_noise helper function
-        # TODO
+        # tested, works fine
         for particle in self.particle_cloud:
             particle_x = particle.pose.position.x
             particle_y = particle.pose.position.y
