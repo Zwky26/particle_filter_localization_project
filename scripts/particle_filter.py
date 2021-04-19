@@ -59,6 +59,16 @@ class Particle:
         # particle weight
         self.w = w
 
+    def copy_particle(self):
+        p = Pose()
+        p.position.x = self.pose.position.x
+        p.position.y = self.pose.position.y
+        p.orientation.x = self.pose.orientation.x
+        p.orientation.y = self.pose.orientation.y
+        p.orientation.z = self.pose.orientation.z
+        p.orientation.w = self.pose.orientation.w
+        return Particle(p, self.w)
+
 
 
 class ParticleFilter:
@@ -84,7 +94,7 @@ class ParticleFilter:
         self.lh_field = LikelihoodField()
 
         # the number of particles used in the particle filter
-        self.num_particles = 1000
+        self.num_particles = 10000
 
         # initialize the particle cloud array
         self.particle_cloud = []
@@ -174,6 +184,12 @@ class ParticleFilter:
         self.publish_particle_cloud()
         #print("init done")
 
+    # Fix probabilities for normalization for numpy.choices
+    def fix_p(self, p):
+        p = np.array(p)
+        if p.sum() != 1.0:
+            p /= p.sum()
+        return p.tolist()
 
     def normalize_particles(self):
         ''' make all the particle weights sum to 1.0
@@ -182,11 +198,9 @@ class ParticleFilter:
         for p in self.particle_cloud:
             weight_sum += p.w
         for p in self.particle_cloud:
-            p.w /= weight_sum
+            p.w = p.w / weight_sum
         
         
-        
-
     def publish_particle_cloud(self):
         ''' Publish the current particle cloud so rviz can display it'''
         #checked, working fine
@@ -210,20 +224,26 @@ class ParticleFilter:
         self.robot_estimate_pub.publish(robot_pose_estimate_stamped)
 
 
-
     def resample_particles(self):
         # TODO
+        # Switch to deep copy of particles
+        self.normalize_particles()
         particles = [p for p in self.particle_cloud] # get list of particle poses
         weights = [p.w for p in self.particle_cloud] # get probabilities (weights) for all particle poses
+        fixed_weights = self.fix_p(weights)
+        print(sum(weights))
         '''print("Weights")
         for w in weights:
             print(w)'''
-        new_sample = draw_random_sample(particles, weights, self.num_particles) # random sample
-        self.particle_cloud = new_sample
+        new_sample = draw_random_sample(list(range(0,self.num_particles)), fixed_weights, self.num_particles) # random sample
+        new_particles = []
+        for i in new_sample:
+            new_particles.append(self.particle_cloud[i].copy_particle())
+        self.particle_cloud = new_particles
 
 
     def robot_scan_received(self, data):
-
+        print(len(self.particle_cloud))
         # wait until initialization is complete
         if not(self.initialized):
             return
@@ -333,8 +353,9 @@ class ParticleFilter:
     
     def update_particle_weights_with_measurement_model(self, data):
         # Update with likelihood field 
+        # Changed cardinal directions to make it faster
         # TODO
-        cardinal_direction_idxs = [0, 45, 90, 135, 180, 225, 270, 315]
+        cardinal_direction_idxs = [0, 90, 180, 270]
         lidar_measurements = [data.ranges[i] for i in cardinal_direction_idxs] # tested, this works
         print("Lidar:")
         print(lidar_measurements)
