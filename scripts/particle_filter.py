@@ -186,19 +186,17 @@ class ParticleFilter:
 
     # Fix probabilities for normalization for numpy.choices
     def fix_p(self, p):
-        p = np.array(p)
-        if p.sum() != 1.0:
-            p /= p.sum()
-        return p.tolist()
+        a = np.array(p)
+        a /= a.sum()
+        return a.tolist()
 
     def normalize_particles(self):
         ''' make all the particle weights sum to 1.0
             Calculates total particle weight sum, then scales'''
-        weight_sum = 0.0
-        for p in self.particle_cloud:
-            weight_sum += p.w
-        for p in self.particle_cloud:
-            p.w = p.w / weight_sum
+        weights = [p.w for p in self.particle_cloud] # get probabilities (weights) for all particle poses
+        fixed_weights = self.fix_p(weights)
+        for i in range(self.num_particles):
+            self.particle_cloud[i].w = fixed_weights[i]
         
         
     def publish_particle_cloud(self):
@@ -227,15 +225,12 @@ class ParticleFilter:
     def resample_particles(self):
         # TODO
         # Switch to deep copy of particles
-        self.normalize_particles()
-        particles = [p for p in self.particle_cloud] # get list of particle poses
         weights = [p.w for p in self.particle_cloud] # get probabilities (weights) for all particle poses
-        fixed_weights = self.fix_p(weights)
         print(sum(weights))
         '''print("Weights")
         for w in weights:
             print(w)'''
-        new_sample = draw_random_sample(list(range(0,self.num_particles)), fixed_weights, self.num_particles) # random sample
+        new_sample = draw_random_sample(list(range(0,self.num_particles)), weights, self.num_particles) # random sample
         new_particles = []
         for i in new_sample:
             new_particles.append(self.particle_cloud[i].copy_particle())
