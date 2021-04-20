@@ -134,7 +134,6 @@ class ParticleFilter:
         self.initialized = True
 
 
-
     def get_map(self, data):
         '''Called when map is first loaded, stores map'''
         #checked, working fine
@@ -168,7 +167,7 @@ class ParticleFilter:
             p = Pose()
             p.position.x = spaces[space][0]
             p.position.y = spaces[space][1]
-            random_yaw = randint(0, 359)
+            random_yaw = math.radians(randint(0, 359))
             q = quaternion_from_euler(0, 0, random_yaw)
             p.orientation.x = q[0]
             p.orientation.y = q[1]
@@ -187,7 +186,7 @@ class ParticleFilter:
     # Fix probabilities for normalization for numpy.choices
     def fix_p(self, p):
         a = np.array(p)
-        a /= a.sum()
+        a = a / a.sum()
         return a.tolist()
 
     def normalize_particles(self):
@@ -226,7 +225,7 @@ class ParticleFilter:
         # TODO
         # Switch to deep copy of particles
         weights = [p.w for p in self.particle_cloud] # get probabilities (weights) for all particle poses
-        print(sum(weights))
+        #print(sum(weights))
         '''print("Weights")
         for w in weights:
             print(w)'''
@@ -350,22 +349,25 @@ class ParticleFilter:
         # Update with likelihood field 
         # Changed cardinal directions to make it faster
         # TODO
-        cardinal_direction_idxs = [0, 90, 180, 270]
+        cardinal_direction_idxs = [0, 45, 90, 135, 180, 225, 270]
         lidar_measurements = [data.ranges[i] for i in cardinal_direction_idxs] # tested, this works
         print("Lidar:")
         print(lidar_measurements)
         # Iterate through every particle
         for particle in self.particle_cloud:
             q = 1
+            num_measures = 0
             for i in range(len(cardinal_direction_idxs)):
                 if lidar_measurements[i] <= 3.5:
                     euler_angle = get_yaw_from_pose(particle.pose)
                     adjusted_x = particle.pose.position.x + (lidar_measurements[i] * math.cos(euler_angle + math.radians(cardinal_direction_idxs[i])))
                     adjusted_y = particle.pose.position.y + (lidar_measurements[i] * math.sin(euler_angle + math.radians(cardinal_direction_idxs[i])))
                     dist = self.lh_field.get_closest_obstacle_distance(adjusted_x, adjusted_y) #might need to convert these to likelihood coordinates
+                    if not math.isnan(dist):
                     # sigma_hit = 0.1
-                    q = q * (compute_prob_zero_centered_gaussian(dist, 0.1)) # todo adjust this to be the more complicated version
-            if math.isnan(q): 
+                        num_measures += 1
+                        q = q * (compute_prob_zero_centered_gaussian(dist, 0.1)) # todo adjust this to be the more complicated version
+            if math.isnan(q) or num_measures == 0: 
                 particle.w = 0
             else:
                 particle.w = q
@@ -378,7 +380,6 @@ class ParticleFilter:
     
 
     def update_particles_with_motion_model(self, x_diff, y_diff, yaw_diff):
-
         # based on the how the robot has moved (calculated from its odometry), we'll  move
         # all of the particles correspondingly
         # Generate noise with generate_noise helper function
@@ -386,10 +387,11 @@ class ParticleFilter:
         for particle in self.particle_cloud:
             particle_x = particle.pose.position.x
             particle_y = particle.pose.position.y
-            particle_theta = get_yaw_from_pose(particle.pose)            # Can play with scale of noise later
-            particle.pose.position.x = self.generate_noise(particle_x + x_diff, 0.05)
-            particle.pose.position.y = self.generate_noise(particle_y + y_diff, 0.05)
-            new_theta = self.generate_noise(particle_theta + yaw_diff, 0.05) % 360 # I think this makes angle from 0-359
+            particle_theta = get_yaw_from_pose(particle.pose)
+            # Can play with scale of noise later
+            particle.pose.position.x = self.generate_noise(particle_x + x_diff, 0.5)
+            particle.pose.position.y = self.generate_noise(particle_y + y_diff, 0.5)
+            new_theta = self.generate_noise(particle_theta + yaw_diff, 0.5)
             new_q = quaternion_from_euler(0, 0, new_theta)
             particle.pose.orientation.x = new_q[0]
             particle.pose.orientation.y = new_q[1]
