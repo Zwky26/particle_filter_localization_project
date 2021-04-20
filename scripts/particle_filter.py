@@ -94,7 +94,7 @@ class ParticleFilter:
         self.lh_field = LikelihoodField()
 
         # the number of particles used in the particle filter
-        self.num_particles = 10000
+        self.num_particles = 2000
 
         # initialize the particle cloud array
         self.particle_cloud = []
@@ -368,7 +368,8 @@ class ParticleFilter:
                     adjusted_x = particle.pose.position.x + (lidar_measurements[i] * math.cos(euler_angle + math.radians(cardinal_direction_idxs[i])))
                     adjusted_y = particle.pose.position.y + (lidar_measurements[i] * math.sin(euler_angle + math.radians(cardinal_direction_idxs[i])))
                     dist = self.lh_field.get_closest_obstacle_distance(adjusted_x, adjusted_y) #might need to convert these to likelihood coordinates
-                    q = q * (compute_prob_zero_centered_gaussian(dist, 0.5)) # todo adjust this to be the more complicated version
+                    # sigma_hit = 0.1
+                    q = q * (compute_prob_zero_centered_gaussian(dist, 0.1)) # todo adjust this to be the more complicated version
             if math.isnan(q): 
                 particle.w = 0
             else:
