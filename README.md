@@ -35,6 +35,6 @@
   * Updating estimated robot pose: This step is done in "update_estimated_robot_pose". We iterate throguh all the particles in the particle cloud, calculating the average x, y, and quarternion representation. We convert this average to a pose, and save the new pose.  
   * Optimization of parameters
    
-* Challenges
+* Challenges: There were two main stopping points for the project. After importing some of the code from Class 6, we found that RViz what not publishing any particles. Using "rostopic echo particlecloud", no particles were being published. After getting help in the Slack channel, we found that the starter code from Class 6 uses topic "particlecloud" whereas particle_filter uses the topic "particle_cloud". After fixing this discrepency, the particles were being published, but not visualized. After some trial-and-error, we discovered that the particles were being visualized, just very far off the map. Using the map metadata, this problem was solved quickly by scaling the occupancy grid values to x,y coordinates. 
 * Future Work
 * Takeaways
