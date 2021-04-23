@@ -60,6 +60,8 @@ class Particle:
         self.w = w
 
     def copy_particle(self):
+        ''' makes a deep copy of a particle. For some reason sometimes shallow copy causes
+        errors, so for resample_particles use this'''
         p = Pose()
         p.position.x = self.pose.position.x
         p.position.y = self.pose.position.y
@@ -136,12 +138,10 @@ class ParticleFilter:
 
     def get_map(self, data):
         '''Called when map is first loaded, stores map'''
-        #checked, working fine
         self.map = data
     
     def map_point_to_rviz_coord(self, row, col):
         '''From row and column of occupancy grid, return as form of xy in map'''
-        #checked, working fine
         scale = self.map.info.resolution
         origin = self.map.info.origin
         return ((row * scale) + origin.position.x, (col * scale) + origin.position.y)
@@ -151,12 +151,12 @@ class ParticleFilter:
             In grid, get all cells that have a zero weight, normalize and random sample'''
         #drills to find all acceptable locations in occupancy grid
         spaces = []
-        #checked, working fine   
         for row in range (self.map.info.width):
             for col in range (self.map.info.height):
                 ind = row + col*self.map.info.width
                 w = self.map.data[ind]
                 if w == 0:
+                    #converts cell index to x,y coord
                     spaces.append(self.map_point_to_rviz_coord(row, col))
         
         # draw_random_sample has to use 1-d array (so work with list indices 
@@ -164,6 +164,7 @@ class ParticleFilter:
         
         # Make particle objects
         for space in chosen_spaces:
+            #takes x, y coord and adds a random theta to orientation
             p = Pose()
             p.position.x = spaces[space][0]
             p.position.y = spaces[space][1]
@@ -176,12 +177,9 @@ class ParticleFilter:
 
             new_particle = Particle(p, 1.0) 
             self.particle_cloud.append(new_particle)
-        #for p in self.particle_cloud:
-        #    print(p.pose.position.x, p.pose.position.y)
         self.normalize_particles()
 
         self.publish_particle_cloud()
-        #print("init done")
 
     # Fix probabilities for normalization for numpy.choices
     def fix_p(self, p):
@@ -200,7 +198,6 @@ class ParticleFilter:
         
     def publish_particle_cloud(self):
         ''' Publish the current particle cloud so rviz can display it'''
-        #checked, working fine
         rospy.sleep(1)
         particle_cloud_pose_array = PoseArray()
         particle_cloud_pose_array.header = Header(stamp=rospy.Time.now(), frame_id=self.map_topic)
@@ -214,7 +211,6 @@ class ParticleFilter:
 
     def publish_estimated_robot_pose(self):
         '''Publishes our best guess of where robot is, so rviz can display it '''
-        #currently untested, not far enough to get accurate estimate
         robot_pose_estimate_stamped = PoseStamped()
         robot_pose_estimate_stamped.pose = self.robot_estimate
         robot_pose_estimate_stamped.header = Header(stamp=rospy.Time.now(), frame_id=self.map_topic)
@@ -222,13 +218,9 @@ class ParticleFilter:
 
 
     def resample_particles(self):
-        # TODO
+        '''with normalized weights, do a random draw to get an updated particle cloud '''
         # Switch to deep copy of particles
         weights = [p.w for p in self.particle_cloud] # get probabilities (weights) for all particle poses
-        #print(sum(weights))
-        '''print("Weights")
-        for w in weights:
-            print(w)'''
         new_sample = draw_random_sample(list(range(0,self.num_particles)), weights, self.num_particles) # random sample
         new_particles = []
         for i in new_sample:
@@ -237,7 +229,7 @@ class ParticleFilter:
 
 
     def robot_scan_received(self, data):
-        print(len(self.particle_cloud))
+        ''' main logic of program'''
         # wait until initialization is complete
         if not(self.initialized):
             return
@@ -291,24 +283,19 @@ class ParticleFilter:
                 # This is where the main logic of the particle filter is carried out
 
                 self.update_particles_with_motion_model(curr_x - old_x, curr_y - old_y, curr_yaw - old_yaw)
-                '''print("Before measurement weights:\n")
 
-                for p in self.particle_cloud:
-                    print(p.w) '''
                 self.update_particle_weights_with_measurement_model(data)
-                '''print("measurement step done")
-                print("After measurement weights:")
-
-                for p in self.particle_cloud:
-                    print(p.w)'''
+                
                 self.normalize_particles()
                 
                 self.resample_particles()
                 
+                self.normalize_particles()
 
                 self.update_estimated_robot_pose()
 
                 self.publish_particle_cloud()
+
                 self.publish_estimated_robot_pose()
 
                 self.odom_pose_last_motion_update = self.odom_pose
@@ -347,13 +334,9 @@ class ParticleFilter:
     
     def update_particle_weights_with_measurement_model(self, data):
         # Update with likelihood field 
-        # Changed cardinal directions to make it faster
-        # TODO
         cardinal_direction_idxs = [0, 45, 90, 135, 180, 225, 270]
         lidar_measurements = [data.ranges[i] for i in cardinal_direction_idxs] # tested, this works
-        print("Lidar:")
-        print(lidar_measurements)
-        # Iterate through every particle
+
         for particle in self.particle_cloud:
             q = 1
             num_measures = 0
@@ -383,7 +366,6 @@ class ParticleFilter:
         # based on the how the robot has moved (calculated from its odometry), we'll  move
         # all of the particles correspondingly
         # Generate noise with generate_noise helper function
-        # tested, works fine
         for particle in self.particle_cloud:
             particle_x = particle.pose.position.x
             particle_y = particle.pose.position.y
