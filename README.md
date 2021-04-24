@@ -38,3 +38,7 @@
 * Challenges: There were two main stopping points for the project. After importing some of the code from Class 6, we found that RViz what not publishing any particles. Using "rostopic echo particlecloud", no particles were being published. After getting help in the Slack channel, we found that the starter code from Class 6 uses topic "particlecloud" whereas particle_filter uses the topic "particle_cloud". After fixing this discrepency, the particles were being published, but not visualized. After some trial-and-error, we discovered that the particles were being visualized, just very far off the map. Using the map metadata, this problem was solved quickly by scaling the occupancy grid values to x,y coordinates. The other significant problem weencountered was particles dying off. After one or two iterations of updating, all particles would disappear. After talking with Pouya during class worktime, we learned that we actually had too many particles. This was causing each of the particle weights to be very small, so small that given the random sampling step of the measurement model step, every point had a significant risk of being thrown out, regardless of its "correctness". To solve this, we lowered the number of particles and made the measurment model step more lenient. This solved the issue, and the filter was more or less functional after this fix. 
 * Future Work: 
 * Takeaways:
+
+## Other Deliverables
+
+*Gif: ![gif](https://github.com/Zwky26/particle_filter_localization_project/blob/main/particle.gif)
